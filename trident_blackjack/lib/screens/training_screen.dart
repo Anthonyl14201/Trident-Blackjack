@@ -12,6 +12,7 @@ class _GameScreenState extends State<GameScreen> {
   List<PlayingCard> playerHand = [];
   List<PlayingCard> dealerHand = [];
   String result = '';
+  bool roundOver = false;  // Flag to track if the round is over
 
   @override
   void initState() {
@@ -22,6 +23,7 @@ class _GameScreenState extends State<GameScreen> {
   void startRound() {
     playerHand = [deck.drawCard(), deck.drawCard()];
     dealerHand = [deck.drawCard(), deck.drawCard()];
+    roundOver = false;  // Reset roundOver at the start of each round
 
     setState(() {
       result = ''; // Reset result at the start of each round
@@ -33,6 +35,7 @@ class _GameScreenState extends State<GameScreen> {
       playerHand.add(deck.drawCard());
       if (calculateTotal(playerHand) > 21) {
         result = "Player busts!";
+        roundOver = true;  // End round when player busts
       }
     });
   }
@@ -43,6 +46,9 @@ class _GameScreenState extends State<GameScreen> {
       dealerHand.add(deck.drawCard());
     }
     determineWinner();
+    setState(() {
+      roundOver = true;  // End round when player stays
+    });
   }
 
   void determineWinner() {
@@ -85,11 +91,11 @@ class _GameScreenState extends State<GameScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text("Your Hand: ${playerHand.join(', ')}"),
-          Text("Dealer's Visible Card: ${dealerHand[0]}"),
+          Text("Dealer's Cards: ${roundOver ? dealerHand.join(', ') : dealerHand[0]}"),
           if (result.isNotEmpty)
             Text(result, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           SizedBox(height: 20),
-          if (result.isEmpty) // Only show hit/stay if the round isn't over
+          if (!roundOver) // Only show hit/stay if the round isn't over
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -104,7 +110,7 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ],
             ),
-          if (result.isNotEmpty) // Show restart button if round is over
+          if (roundOver) // Show restart button if round is over
             ElevatedButton(
               onPressed: startRound,
               child: Text("Start New Round"),

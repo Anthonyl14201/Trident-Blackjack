@@ -1,16 +1,23 @@
 class Player {
-  double balance;
-  Player(this.balance);
+  int balance;
+  int currentBet;
 
-  void bet(double amount) {
-    balance -= amount;
+  Player({required this.balance, this.currentBet = 0});
+
+  void placeBet(int amount) {
+    if (balance >= amount) {
+      currentBet += amount;
+      balance -= amount;
+    }
   }
 
-  void win(double amount) {
-    balance += amount;
+  void resetBet() {
+    balance += currentBet;
+    currentBet = 0;
   }
 
-  void lose(double amount) {
-    balance -= amount;
+  void winBet() {
+    balance += currentBet * 2;
+    currentBet = 0;
   }
 }

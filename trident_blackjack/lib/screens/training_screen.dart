@@ -12,21 +12,39 @@ class _GameScreenState extends State<GameScreen> {
   List<PlayingCard> playerHand = [];
   List<PlayingCard> dealerHand = [];
   String result = '';
-  bool roundOver = false;  // Flag to track if the round is over
+  bool roundOver = false;
+  bool bettingPhase = true; // Player will bet before hands are dealt
+
+  int balance = 1000; // Player starts with $1000
+  int currentBet = 0; // Player's current bet
+
+  final TextEditingController betController = TextEditingController(); // For text input
 
   @override
   void initState() {
     super.initState();
-    startRound();
   }
 
   void startRound() {
-    playerHand = [deck.drawCard(), deck.drawCard()];
-    dealerHand = [deck.drawCard(), deck.drawCard()];
-    roundOver = false;  // Reset roundOver at the start of each round
+    if (currentBet > 0) { // Only start if a bet has been placed
+      playerHand = [deck.drawCard(), deck.drawCard()];
+      dealerHand = [deck.drawCard(), deck.drawCard()];
+      roundOver = false;
+      bettingPhase = false; // End the betting phase when the round starts
 
+      setState(() {
+        result = '';
+      });
+    }
+  }
+
+  void resetRound() {
     setState(() {
-      result = ''; // Reset result at the start of each round
+      currentBet = 0;
+      bettingPhase = true; // Go back to betting phase
+      result = '';
+      playerHand.clear();
+      dealerHand.clear();
     });
   }
 
@@ -35,19 +53,19 @@ class _GameScreenState extends State<GameScreen> {
       playerHand.add(deck.drawCard());
       if (calculateTotal(playerHand) > 21) {
         result = "Player busts!";
-        roundOver = true;  // End round when player busts
+        roundOver = true;
+        balance -= currentBet; // Deduct bet if the player busts
       }
     });
   }
 
   void playerStay() {
-    // Dealer's turn logic
     while (calculateTotal(dealerHand) < 17) {
       dealerHand.add(deck.drawCard());
     }
     determineWinner();
     setState(() {
-      roundOver = true;  // End round when player stays
+      roundOver = true;
     });
   }
 
@@ -58,8 +76,10 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       if (dealerTotal > 21 || playerTotal > dealerTotal) {
         result = "Player wins!";
+        balance += currentBet; // Add the bet to balance if the player wins
       } else if (dealerTotal > playerTotal) {
         result = "Dealer wins!";
+        balance -= currentBet; // Deduct bet if dealer wins
       } else {
         result = "It's a tie!";
       }
@@ -76,11 +96,18 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     while (total > 21 && aces > 0) {
-      total -= 10; // Counting an Ace as 1 instead of 11
+      total -= 10; // Count an Ace as 1 instead of 11
       aces -= 1;
     }
 
     return total;
+  }
+
+  void updateBet(int amount) {
+    setState(() {
+      currentBet += amount;
+      betController.text = currentBet.toString(); // Update text field with new bet
+    });
   }
 
   @override
@@ -89,32 +116,68 @@ class _GameScreenState extends State<GameScreen> {
       appBar: AppBar(title: Text("Blackjack Game")),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center, // Ensure center alignment
         children: [
-          Text("Your Hand: ${playerHand.join(', ')}"),
-          Text("Dealer's Cards: ${roundOver ? dealerHand.join(', ') : dealerHand[0]}"),
-          if (result.isNotEmpty)
-            Text(result, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          SizedBox(height: 20),
-          if (!roundOver) // Only show hit/stay if the round isn't over
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+          if (bettingPhase) ...[
+            Center(child: Text("Balance: \$${balance.toString()}")),  // Centered balance
+            Center(child: Text("Current Bet: \$${currentBet.toString()}")),  // Centered bet
+            SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 50.0), // Add padding to center text field
+              child: TextField(
+                controller: betController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: 'Enter your bet'),
+                onChanged: (value) {
+                  setState(() {
+                    currentBet = int.tryParse(value) ?? 0;
+                  });
+                },
+              ),
+            ),
+            SizedBox(height: 10),
+            Wrap(
+              spacing: 10, // Space between buttons
+              alignment: WrapAlignment.center, // Center buttons in Wrap
               children: [
-                ElevatedButton(
-                  onPressed: playerHit,
-                  child: Text("Hit"),
-                ),
-                SizedBox(width: 20),
-                ElevatedButton(
-                  onPressed: playerStay,
-                  child: Text("Stay"),
-                ),
+                ElevatedButton(onPressed: () => updateBet(1), child: Text("\$1")),
+                ElevatedButton(onPressed: () => updateBet(5), child: Text("\$5")),
+                ElevatedButton(onPressed: () => updateBet(10), child: Text("\$10")),
+                ElevatedButton(onPressed: () => updateBet(20), child: Text("\$20")),
+                ElevatedButton(onPressed: () => updateBet(50), child: Text("\$50")),
+                ElevatedButton(onPressed: () => updateBet(100), child: Text("\$100")),
               ],
             ),
-          if (roundOver) // Show restart button if round is over
-            ElevatedButton(
-              onPressed: startRound,
-              child: Text("Start New Round"),
+            SizedBox(height: 20),
+            Center(
+              child: ElevatedButton(
+                onPressed: startRound,
+                child: Text("Start Round"),
+              ),
             ),
+          ] else ...[
+            Center(child: Text("Your Hand: ${playerHand.join(', ')}")), // Centered hand
+            Center(child: Text("Dealer's Cards: ${roundOver ? dealerHand.join(', ') : dealerHand[0]}")), // Centered dealer hand
+            if (result.isNotEmpty)
+              Center(child: Text(result, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))), // Centered result
+            SizedBox(height: 20),
+            if (!roundOver)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(onPressed: playerHit, child: Text("Hit")),
+                  SizedBox(width: 20),
+                  ElevatedButton(onPressed: playerStay, child: Text("Stay")),
+                ],
+              ),
+            if (roundOver)
+              Center(
+                child: ElevatedButton(
+                  onPressed: resetRound,
+                  child: Text("Start New Round"),
+                ),
+              ),
+          ],
         ],
       ),
     );

@@ -11,11 +11,10 @@ class PlayingCard {
   }
 }
 
-
 class Deck {
   List<PlayingCard> cards = [];
 
-  Deck() {
+  Deck({int numberOfDecks = 1, required int deckCount}) {  // Default to 1 deck
     List<String> suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
     List<String> ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     Map<String, int> values = {
@@ -34,9 +33,12 @@ class Deck {
       'A': 11,
     };
 
-    for (var suit in suits) {
-      for (var rank in ranks) {
-        cards.add(PlayingCard(suit, rank, values[rank]!));
+    // Create a deck based on the number of decks
+    for (var i = 0; i < numberOfDecks; i++) {
+      for (var suit in suits) {
+        for (var rank in ranks) {
+          cards.add(PlayingCard(rank, suit, values[rank]!));
+        }
       }
     }
 

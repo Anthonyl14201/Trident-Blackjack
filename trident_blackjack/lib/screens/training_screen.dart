@@ -8,7 +8,7 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
-  Deck deck = Deck();
+  Deck deck = Deck(deckCount : 6); // Default to 6 decks
   List<PlayingCard> playerHand = [];
   List<PlayingCard> dealerHand = [];
   String result = '';
@@ -113,7 +113,17 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Blackjack Game")),
+      appBar: AppBar(
+        title: Text("Blackjack Game"),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.settings),
+            onPressed: () {
+              Navigator.pushNamed(context, '/config');  // Navigate to the config menu
+            },
+          ),
+        ],
+      ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center, // Ensure center alignment

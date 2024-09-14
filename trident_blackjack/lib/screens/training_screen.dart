@@ -8,12 +8,16 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
-  Deck deck = Deck(deckCount : 6); // Default to 6 decks
+  Deck deck = Deck(deckCount: 6); // Default to 6 decks
   List<PlayingCard> playerHand = [];
   List<PlayingCard> dealerHand = [];
   String result = '';
   bool roundOver = false;
   bool bettingPhase = true; // Player will bet before hands are dealt
+
+  bool canDouble = false;
+  bool canSplit = false;
+  bool canSurrender = false;
 
   int balance = 1000; // Player starts with $1000
   int currentBet = 0; // Player's current bet
@@ -26,11 +30,16 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void startRound() {
-    if (currentBet > 0) { // Only start if a bet has been placed
+    if (currentBet > 0) {
       playerHand = [deck.drawCard(), deck.drawCard()];
       dealerHand = [deck.drawCard(), deck.drawCard()];
       roundOver = false;
       bettingPhase = false; // End the betting phase when the round starts
+
+      // Enable or disable options based on player's hand
+      canDouble = playerHand.length == 2;
+      canSplit = playerHand[0].rank == playerHand[1].rank;  // Check for matching ranks
+      canSurrender = true; // Allow surrender before any other action
 
       setState(() {
         result = '';
@@ -56,6 +65,9 @@ class _GameScreenState extends State<GameScreen> {
         roundOver = true;
         balance -= currentBet; // Deduct bet if the player busts
       }
+      // Disable surrender after the first move
+      canSurrender = false;
+      canDouble = false;
     });
   }
 
@@ -103,6 +115,45 @@ class _GameScreenState extends State<GameScreen> {
     return total;
   }
 
+  void doubleDown() {
+    if (canDouble) {
+      setState(() {
+        currentBet *= 2; // Double the bet
+        playerHand.add(deck.drawCard()); // Draw one card
+        if (calculateTotal(playerHand) > 21) {
+          result = "Player busts!";
+          balance -= currentBet; // Deduct bet if the player busts
+        } else {
+          playerStay(); // End the turn after doubling down
+        }
+        roundOver = true;
+        canDouble = false; // Prevent doubling after the first move
+      });
+    }
+  }
+
+  void split() {
+    if (canSplit) {
+      List<PlayingCard> secondHand = [playerHand.removeAt(1), deck.drawCard()];
+      playerHand.add(deck.drawCard());
+      // Handle the logic for playing the second hand here
+      // Not fully implemented, but this gives you a starting point
+      result = "Player split!";
+      canSplit = false;
+    }
+  }
+
+  void surrender() {
+    if (canSurrender) {
+      setState(() {
+        balance -= currentBet ~/ 2; // Lose half the bet
+        result = "Player surrenders!";
+        roundOver = true;
+        canSurrender = false; // Prevent surrender after the first move
+      });
+    }
+  }
+
   void updateBet(int amount) {
     setState(() {
       currentBet += amount;
@@ -126,7 +177,7 @@ class _GameScreenState extends State<GameScreen> {
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center, // Ensure center alignment
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (bettingPhase) ...[
             Center(child: Text("Balance: \$${balance.toString()}")),  // Centered balance
@@ -172,12 +223,43 @@ class _GameScreenState extends State<GameScreen> {
               Center(child: Text(result, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))), // Centered result
             SizedBox(height: 20),
             if (!roundOver)
-              Row(
+              Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  ElevatedButton(onPressed: playerHit, child: Text("Hit")),
-                  SizedBox(width: 20),
-                  ElevatedButton(onPressed: playerStay, child: Text("Stay")),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: playerHit,
+                        child: Text("Hit"),
+                      ),
+                      SizedBox(width: 10),
+                      ElevatedButton(
+                        onPressed: playerStay,
+                        child: Text("Stay"),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: canDouble ? doubleDown : null,
+                        child: Text("Double Down"),
+                      ),
+                      SizedBox(width: 10),
+                      ElevatedButton(
+                        onPressed: canSplit ? split : null,
+                        child: Text("Split"),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: canSurrender ? surrender : null,
+                    child: Text("Surrender"),
+                  ),
                 ],
               ),
             if (roundOver)

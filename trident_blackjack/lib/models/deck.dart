@@ -52,4 +52,7 @@ class Deck {
   PlayingCard drawCard() {
     return cards.removeLast();
   }
+  int cardsRemaining(){
+    return cards.length;
+  }
 }

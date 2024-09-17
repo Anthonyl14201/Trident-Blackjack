@@ -13,27 +13,21 @@ class PlayingCard {
 
 class Deck {
   List<PlayingCard> cards = [];
+  List<PlayingCard> discardedCards = []; // To keep track of discarded cards
 
-  Deck({int numberOfDecks = 1, required int deckCount}) {  // Default to 1 deck
+  Deck({int numberOfDecks = 1}) { // Default to 1 deck
+    _createDeck(numberOfDecks);
+  }
+
+  void _createDeck(int numberOfDecks) {
     List<String> suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
     List<String> ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     Map<String, int> values = {
-      '2': 2,
-      '3': 3,
-      '4': 4,
-      '5': 5,
-      '6': 6,
-      '7': 7,
-      '8': 8,
-      '9': 9,
-      '10': 10,
-      'J': 10,
-      'Q': 10,
-      'K': 10,
-      'A': 11,
+      '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+      '10': 10, 'J': 10, 'Q': 10, 'K': 10, 'A': 11,
     };
 
-    // Create a deck based on the number of decks
+    cards.clear(); // Clear existing cards
     for (var i = 0; i < numberOfDecks; i++) {
       for (var suit in suits) {
         for (var rank in ranks) {
@@ -49,10 +43,24 @@ class Deck {
     cards.shuffle();
   }
 
+  void reshuffle() {
+    // Add discarded cards back into the deck
+    cards.addAll(discardedCards);
+    discardedCards.clear();
+    shuffle();
+  }
+
   PlayingCard drawCard() {
+    if (cards.isEmpty) {
+      reshuffle(); // Reshuffle if the deck is empty
+    }
     return cards.removeLast();
   }
-  int cardsRemaining(){
+  void discardCard(PlayingCard card) {
+    discardedCards.add(card);
+  }
+
+  int cardsRemaining() {
     return cards.length;
   }
 }

@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ConfigScreen extends StatefulWidget {
   @override
-  // ignore: library_private_types_in_public_api
   _ConfigScreenState createState() => _ConfigScreenState();
 }
 
@@ -19,7 +18,6 @@ class _ConfigScreenState extends State<ConfigScreen> {
     _loadConfig();
   }
 
-  // Load config from shared preferences
   Future<void> _loadConfig() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -30,7 +28,6 @@ class _ConfigScreenState extends State<ConfigScreen> {
     });
   }
 
-  // Save config to shared preferences
   Future<void> _saveConfig() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setInt('numberOfDecks', numberOfDecks);
@@ -102,7 +99,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
             ElevatedButton(
               onPressed: () {
                 _saveConfig();
-                Navigator.pop(context); // Go back to game screen
+                Navigator.pop(context, numberOfDecks); // Pass the updated number of decks back
               },
               child: Text("Save Settings"),
             ),

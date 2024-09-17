@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import '../models/deck.dart';  // Adjust the path based on your folder structure
+import 'package:trident_blackjack/models/deck.dart';
+import 'package:trident_blackjack/models/hand.dart';  // Import the Hand class
+import 'package:shared_preferences/shared_preferences.dart';
+import 'config_screen.dart';  // Import the ConfigScreen class
 
 class GameScreen extends StatefulWidget {
   @override
@@ -8,10 +11,11 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
-  Deck deck = Deck(deckCount: 6); // Default to 6 decks
-  List<List<PlayingCard>> playerHands = []; // Store multiple hands after splitting
+  int numberOfDecks = 2;
+  Deck deck = Deck(numberOfDecks: 6); // Default to 6 decks
+  List<Hand> playerHands = []; // Store multiple hands after splitting
+  Hand dealerHand = Hand();
   int activeHandIndex = 0; // Track which hand is currently active
-  List<PlayingCard> dealerHand = [];
   String result = '';
   bool roundOver = false;
   bool bettingPhase = true; // Player will bet before hands are dealt
@@ -28,37 +32,84 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
+    _loadConfig(); // Load configuration when initializing the game screen
   }
 
-  void startRound() {
-    if (currentBet > 0) {
-      playerHands = [
-        [deck.drawCard(), deck.drawCard()]
-      ];
-      dealerHand = [deck.drawCard(), deck.drawCard()];
-      activeHandIndex = 0;
-      roundOver = false;
-      bettingPhase = false; // End the betting phase when the round starts
+  // Load config from shared preferences
+  Future<void> _loadConfig() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      numberOfDecks = prefs.getInt('numberOfDecks') ?? 6; // Load number of decks
+      _reinitializeDeck(); // Reinitialize deck with the loaded number of decks
+    });
+  }
+  void _reinitializeDeck() {
+    setState(() {
+      deck = Deck(numberOfDecks: numberOfDecks); // Reinitialize deck
+      // Optionally reset hands and dealer hand
+      playerHands = [];
+      dealerHand = Hand();
+    });
+  }
+  Future<void> _navigateToConfigScreen() async {
+    final updatedNumberOfDecks = await Navigator.push<int>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ConfigScreen(),
+      ),
+    );
 
-      // Enable or disable options based on player's hand
-      canDouble = playerHands[0].length == 2;
-      canSplit = playerHands[0][0].value == playerHands[0][1].value;  // Check for matching ranks
-      canSurrender = true; // Allow surrender before any other action
-      if (isBlackjack(playerHands[0])) {
-        double winnings = currentBet * 1.5;
-        balance += winnings.toInt() + currentBet; // Add the winnings plus the original bet
-        result = 'Player wins with Blackjack! You win \$${winnings.toStringAsFixed(2)}!';
-        roundOver = true;
-        setState(() {});
-        return;
-    }
+    if (updatedNumberOfDecks != null) {
       setState(() {
-        result = '';
+        numberOfDecks = updatedNumberOfDecks;
+        _reinitializeDeck();
       });
     }
   }
-  bool isBlackjack(List<PlayingCard> hand) {
-    return hand.length == 2 && (hand[0].value == 1 && hand[1].value == 10 || hand[0].value == 10 && hand[1].value == 1);
+
+  void startRound() {
+  if (currentBet > 0) {
+    playerHands = [Hand()];
+    playerHands[0].addCard(deck.drawCard());
+    playerHands[0].addCard(deck.drawCard());
+    dealerHand.addCard(deck.drawCard());
+    dealerHand.addCard(deck.drawCard());
+    activeHandIndex = 0;
+    roundOver = false;
+    bettingPhase = false; // End the betting phase when the round starts
+
+    // Debugging: Print the initial cards
+    //print('hand.length: ${playerHands[0].cards.length}');
+    //print('Player Hand 1: ${playerHands[0].getDisplayString()}');
+    //print('Dealer Hand: ${dealerHand.getDisplayString()}');
+
+    // Enable or disable options based on player's hand
+    canDouble = playerHands[0].cards.length == 2;
+    canSplit = playerHands[0].isPair(); // Check for matching ranks
+    canSurrender = true; // Allow surrender before any other action
+
+    // Check if the player or dealer has Blackjack
+    if (isBlackjack(playerHands[0])) {
+      // Player has Blackjack
+      double winnings = currentBet * 1.5;
+      balance += winnings.toInt() + currentBet; // Add the winnings plus the original bet
+      result = 'Player wins with Blackjack! You win \$${winnings.toStringAsFixed(2)}!';
+      roundOver = true;
+      setState(() {});
+      return;
+    }
+
+    setState(() {
+      result = '';
+    });
+  }
+}
+
+
+  bool isBlackjack(Hand hand) {
+    return hand.cards.length == 2 && 
+      (hand.cards[0].value == 11 && hand.cards[1].value == 10 || 
+      hand.cards[0].value == 10 && hand.cards[1].value == 11);
   }
 
   void resetRound() {
@@ -66,15 +117,18 @@ class _GameScreenState extends State<GameScreen> {
       currentBet = betController.text.isEmpty ? 0 : int.parse(betController.text);
       bettingPhase = true; // Go back to betting phase
       result = '';
+      playerHands.forEach((hand) => hand.cards.forEach((card) => deck.discardCard(card)));
+    // Optionally: Discard the dealer's cards
+      dealerHand.cards.forEach((card) => deck.discardCard(card));
       playerHands.clear();
-      dealerHand.clear();
+      dealerHand.resetHand();
     });
   }
 
   void playerHit() {
     setState(() {
-      playerHands[activeHandIndex].add(deck.drawCard());
-      if (calculateTotal(playerHands[activeHandIndex]) > 21) {
+      playerHands[activeHandIndex].addCard(deck.drawCard());
+      if (playerHands[activeHandIndex].getTotalValue() > 21) {
         result = "Player busts on hand ${activeHandIndex + 1}!";
         balance -= currentBet; // Immediately deduct the bet if the player busts
         moveToNextHand();
@@ -95,18 +149,25 @@ class _GameScreenState extends State<GameScreen> {
         activeHandIndex++;
         result = "";
         // Reset doubling and surrendering for the new hand
-        canDouble = playerHands[activeHandIndex].length == 2;
+        canDouble = playerHands[activeHandIndex].cards.length == 2;
         canSurrender = true;
-        canSplit = playerHands[activeHandIndex][0].value == playerHands[activeHandIndex][1].value;
+        canSplit = playerHands[activeHandIndex].isPair();
       });
     } else {
-      playDealerHand();  // After the last hand, let the dealer play
+      if (playerHands.every((hand) => hand.getTotalValue() > 21 || hand.surrendered)) {
+        setState(() {
+          roundOver = true;
+        });
+      } 
+      else {
+        playDealerHand();  // After the last hand, let the dealer play
+      }
     }
   }
 
   void playDealerHand() {
-    while (calculateTotal(dealerHand) < 17) {
-      dealerHand.add(deck.drawCard());
+    while (dealerHand.getTotalValue() < 17) {
+      dealerHand.addCard(deck.drawCard());
     }
     determineWinner();
     setState(() {
@@ -115,71 +176,52 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void determineWinner() {
-  bool allHandsBust = true;
+    bool allHandsBust = true;
 
-  // Check if all player hands have busted
-  for (int i = 0; i < playerHands.length; i++) {
-    if (calculateTotal(playerHands[i]) <= 21) {
-      allHandsBust = false;
-      break;
-    }
-  }
-
-  // If not all hands bust, let the dealer draw
-  if (!allHandsBust) {
-    // Dealer draws until they reach at least 17
-    while (calculateTotal(dealerHand) < 17) {
-      dealerHand.add(deck.drawCard());
-    }
-  }
-
-  // Compare results for each hand
-  setState(() {
-    int dealerTotal = calculateTotal(dealerHand);
-    
-    for (int i = 0; i < playerHands.length; i++) {
-      int playerTotal = calculateTotal(playerHands[i]);
-
-      if (playerTotal <= 21) { // Skip busted hands
-        if (dealerTotal > 21 || playerTotal > dealerTotal) {
-          result += "Player wins on hand ${i + 1}!\n";
-          balance += currentBet; // Player wins
-        } else if (dealerTotal > playerTotal) {
-          result += "Dealer wins on hand ${i + 1}!\n";
-          balance -= currentBet; // Dealer wins
-        } else {
-          result += "It's a tie on hand ${i + 1}!\n";
-        }
+    // Check if all player hands have busted
+    for (var hand in playerHands) {
+      if (hand.getTotalValue() <= 21) {
+        allHandsBust = false;
+        break;
       }
     }
-  });
-}
 
-
-
-  int calculateTotal(List<PlayingCard> hand) {
-    int total = 0;
-    int aces = 0;
-
-    for (var card in hand) {
-      total += card.value;
-      if (card.rank == 'A') aces += 1;
+    // If not all hands bust, let the dealer draw
+    if (!allHandsBust) {
+      // Dealer draws until they reach at least 17
+      while (dealerHand.getTotalValue() < 17) {
+        dealerHand.addCard(deck.drawCard());
+      }
     }
 
-    while (total > 21 && aces > 0) {
-      total -= 10; // Count an Ace as 1 instead of 11
-      aces -= 1;
-    }
+    // Compare results for each hand
+    setState(() {
+      int dealerTotal = dealerHand.getTotalValue();
+      
+      for (int i = 0; i < playerHands.length; i++) {
+        int playerTotal = playerHands[i].getTotalValue();
 
-    return total;
+        if (playerTotal <= 21) { // Skip busted hands
+          if (dealerTotal > 21 || playerTotal > dealerTotal) {
+            result += "Player wins on hand ${i + 1}!\n";
+            balance += currentBet; // Player wins
+          } else if (dealerTotal > playerTotal) {
+            result += "Dealer wins on hand ${i + 1}!\n";
+            balance -= currentBet; // Dealer wins
+          } else {
+            result += "It's a tie on hand ${i + 1}!\n";
+          }
+        }
+      }
+    });
   }
 
   void doubleDown() {
     if (canDouble) {
       setState(() {
         currentBet *= 2; // Double the bet
-        playerHands[activeHandIndex].add(deck.drawCard()); // Draw one card for the active hand
-        if (calculateTotal(playerHands[activeHandIndex]) > 21) {
+        playerHands[activeHandIndex].addCard(deck.drawCard()); // Draw one card for the active hand
+        if (playerHands[activeHandIndex].getTotalValue() > 21) {
           result = "Player busts on hand ${activeHandIndex + 1}!";
           balance -= currentBet; // Deduct bet if the player busts
         }
@@ -191,8 +233,10 @@ class _GameScreenState extends State<GameScreen> {
   void split() {
     if (canSplit) {
       setState(() {
-        List<PlayingCard> secondHand = [playerHands[activeHandIndex].removeAt(1), deck.drawCard()];
-        playerHands[activeHandIndex].add(deck.drawCard());
+        Hand secondHand = Hand();
+        secondHand.addCard(playerHands[activeHandIndex].cards.removeAt(1));
+        secondHand.addCard(deck.drawCard());
+        playerHands[activeHandIndex].addCard(deck.drawCard());
         playerHands.add(secondHand);
         result = "Player splits!";
         canSplit = false; 
@@ -205,9 +249,10 @@ class _GameScreenState extends State<GameScreen> {
       setState(() {
         balance -= currentBet ~/ 2; // Lose half the bet
         result = "Player surrenders on hand ${activeHandIndex + 1}!";
-        roundOver = true;
-        canSurrender = false;
-        moveToNextHand(); // Surrender only affects the current hand
+        playerHands[activeHandIndex].surrendered = true;
+        
+        // Set the current hand's result to 'surrendered' and move to the next hand
+        moveToNextHand(); // Immediately move to the next hand without checking hand totals
       });
     }
   }
@@ -218,12 +263,13 @@ class _GameScreenState extends State<GameScreen> {
       betController.text = currentBet.toString(); // Update text field with new bet
     });
   }
+
   void clearBet() {
     setState(() {
       currentBet = 0; // Reset the bet to 0
       betController.text = currentBet.toString();
     });
-}
+  }
 
   @override
 Widget build(BuildContext context) {
@@ -233,9 +279,7 @@ Widget build(BuildContext context) {
       actions: [
         IconButton(
           icon: Icon(Icons.settings),
-          onPressed: () {
-            Navigator.pushNamed(context, '/config');  // Navigate to the config menu
-          },
+          onPressed: _navigateToConfigScreen,  // Correctly navigate to the config screen
         ),
       ],
     ),
@@ -299,7 +343,7 @@ Widget build(BuildContext context) {
                             ),
                           ),
                           TextSpan(
-                            text: "${playerHands[0].join(', ')}", // Display Hand 1 cards
+                            text: playerHands[0].getDisplayString(), // Display Hand 1 cards
                             style: TextStyle(fontSize: 16),
                           ),
                         ],
@@ -317,7 +361,7 @@ Widget build(BuildContext context) {
                               ),
                             ),
                             TextSpan(
-                              text: "${playerHands[1].join(', ')}", // Display Hand 2 cards
+                              text: playerHands[1].getDisplayString(), // Display Hand 2 cards
                               style: TextStyle(fontSize: 16),
                             ),
                           ],
@@ -326,7 +370,7 @@ Widget build(BuildContext context) {
                   ],
                 ),
               ),
-              Center(child: Text("Dealer's Cards: ${roundOver ? dealerHand.join(', ') : dealerHand[0]}")), // Show dealer hand
+              Center(child: Text("Dealer's Cards: ${roundOver ? dealerHand.getDisplayString() : dealerHand.cards[0]}")), // Show dealer hand
               if (result.isNotEmpty)
                 Center(child: Text(result, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))), // Display result
               SizedBox(height: 20),

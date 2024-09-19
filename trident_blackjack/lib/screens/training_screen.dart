@@ -17,7 +17,7 @@ class _GameScreenState extends State<GameScreen> {
   Hand dealerHand = Hand();
   int activeHandIndex = 0; // Track which hand is currently active
   String result = '';
-  bool roundOver = false;
+  bool roundOver = true;
   bool bettingPhase = true; // Player will bet before hands are dealt
 
   bool canDouble = false;
@@ -89,11 +89,27 @@ class _GameScreenState extends State<GameScreen> {
     canSurrender = true; // Allow surrender before any other action
 
     // Check if the player or dealer has Blackjack
-    if (isBlackjack(playerHands[0])) {
+    bool dealerHasBlackjack = isBlackjack(dealerHand);
+    if (isBlackjack(playerHands[0]) && !dealerHasBlackjack) {
       // Player has Blackjack
       double winnings = currentBet * 1.5;
-      balance += winnings.toInt() + currentBet; // Add the winnings plus the original bet
-      result = 'Player wins with Blackjack! You win \$${winnings.toStringAsFixed(2)}!';
+      balance += winnings.toInt();
+      result = 'Player wins with Blackjack!\nYou win \$${winnings.toStringAsFixed(2)}!';
+      roundOver = true;
+      setState(() {});
+      return;
+    }
+    if (isBlackjack(playerHands[0]) && dealerHasBlackjack) {
+      // Both player and dealer have Blackjack
+      result = 'Somehow Dealer and Player got a Blackjack. Its a Push';
+      roundOver = true;
+      setState(() {});
+      return;
+    }
+    if (dealerHasBlackjack) {
+      // Dealer has Blackjack
+      balance -= currentBet; // Deduct the bet if the dealer has Blackjack
+      result = 'Dealer wins with Blackjack :((((';
       roundOver = true;
       setState(() {});
       return;
@@ -129,7 +145,7 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       playerHands[activeHandIndex].addCard(deck.drawCard());
       if (playerHands[activeHandIndex].getTotalValue() > 21) {
-        result = "Player busts on hand ${activeHandIndex + 1}!";
+        result = "Player busts on hand ${activeHandIndex + 1}!\n";
         balance -= currentBet; // Immediately deduct the bet if the player busts
         moveToNextHand();
       }
@@ -147,7 +163,7 @@ class _GameScreenState extends State<GameScreen> {
     if (activeHandIndex < playerHands.length - 1) {
       setState(() {
         activeHandIndex++;
-        result = "";
+        //result = "";
         // Reset doubling and surrendering for the new hand
         canDouble = playerHands[activeHandIndex].cards.length == 2;
         canSurrender = true;
@@ -199,6 +215,9 @@ class _GameScreenState extends State<GameScreen> {
       int dealerTotal = dealerHand.getTotalValue();
       
       for (int i = 0; i < playerHands.length; i++) {
+        if (playerHands[i].surrendered) {
+          continue;
+        }
         int playerTotal = playerHands[i].getTotalValue();
 
         if (playerTotal <= 21) { // Skip busted hands
@@ -222,7 +241,7 @@ class _GameScreenState extends State<GameScreen> {
         currentBet *= 2; // Double the bet
         playerHands[activeHandIndex].addCard(deck.drawCard()); // Draw one card for the active hand
         if (playerHands[activeHandIndex].getTotalValue() > 21) {
-          result = "Player busts on hand ${activeHandIndex + 1}!";
+          result += "Player busts on hand ${activeHandIndex + 1}!\n";
           balance -= currentBet; // Deduct bet if the player busts
         }
         moveToNextHand();
@@ -238,7 +257,7 @@ class _GameScreenState extends State<GameScreen> {
         secondHand.addCard(deck.drawCard());
         playerHands[activeHandIndex].addCard(deck.drawCard());
         playerHands.add(secondHand);
-        result = "Player splits!";
+        result = "Player splits!\n";
         canSplit = false; 
       });
     }
@@ -248,7 +267,7 @@ class _GameScreenState extends State<GameScreen> {
     if (canSurrender) {
       setState(() {
         balance -= currentBet ~/ 2; // Lose half the bet
-        result = "Player surrenders on hand ${activeHandIndex + 1}!";
+        result += "Player surrenders on hand ${activeHandIndex + 1}!\n";
         playerHands[activeHandIndex].surrendered = true;
         
         // Set the current hand's result to 'surrendered' and move to the next hand
@@ -279,7 +298,8 @@ Widget build(BuildContext context) {
       actions: [
         IconButton(
           icon: Icon(Icons.settings),
-          onPressed: _navigateToConfigScreen,  // Correctly navigate to the config screen
+            onPressed: roundOver ? _navigateToConfigScreen : null,
+            // Correctly navigate to the config screen
         ),
       ],
     ),
@@ -332,36 +352,19 @@ Widget build(BuildContext context) {
               Center(
                 child: Column(
                   children: [
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: "Hand 1: ",
-                            style: TextStyle(
-                              fontWeight: activeHandIndex == 0 ? FontWeight.bold : FontWeight.normal,
-                              fontSize: 16,
-                            ),
-                          ),
-                          TextSpan(
-                            text: playerHands[0].getDisplayString(), // Display Hand 1 cards
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (playerHands.length > 1)
+                    for (int i = 0; i < playerHands.length; i++)
                       Text.rich(
                         TextSpan(
                           children: [
                             TextSpan(
-                              text: "Hand 2: ",
+                              text: "Hand ${i + 1}: ",
                               style: TextStyle(
-                                fontWeight: activeHandIndex == 1 ? FontWeight.bold : FontWeight.normal,
+                                fontWeight: activeHandIndex == i ? FontWeight.bold : FontWeight.normal,
                                 fontSize: 16,
                               ),
                             ),
                             TextSpan(
-                              text: playerHands[1].getDisplayString(), // Display Hand 2 cards
+                              text: playerHands[i].getDisplayString(), // Display each hand
                               style: TextStyle(fontSize: 16),
                             ),
                           ],
@@ -372,7 +375,7 @@ Widget build(BuildContext context) {
               ),
               Center(child: Text("Dealer's Cards: ${roundOver ? dealerHand.getDisplayString() : dealerHand.cards[0]}")), // Show dealer hand
               if (result.isNotEmpty)
-                Center(child: Text(result, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))), // Display result
+                Center(child: Text(result, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))), // DISPLAY RESULT
               SizedBox(height: 20),
               if (!roundOver)
                 Column(

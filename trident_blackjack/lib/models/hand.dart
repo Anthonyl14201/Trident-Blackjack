@@ -3,7 +3,7 @@ import 'deck.dart'; // Import the PlayingCard class
 class Hand {
   List<PlayingCard> cards = [];
   bool surrendered = false;
-  
+
   void addCard(PlayingCard card) {
     cards.add(card);
   }
@@ -14,7 +14,7 @@ class Hand {
 
     for (var card in cards) {
       total += card.value;
-      if (card.rank == 'Ace') {
+      if (card.rank == 'A') {
         numAces++;
       }
     }
@@ -29,7 +29,7 @@ class Hand {
   bool isSoft() {
       int numAces = 0;
       for (var card in cards) {
-        if (card.rank == 'Ace') {
+        if (card.rank == 'A') {
           numAces++;
         }
       }

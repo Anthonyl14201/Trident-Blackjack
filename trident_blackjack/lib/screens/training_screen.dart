@@ -3,6 +3,7 @@ import 'package:trident_blackjack/models/deck.dart';
 import 'package:trident_blackjack/models/hand.dart';  // Import the Hand class
 import 'package:shared_preferences/shared_preferences.dart';
 import 'config_screen.dart';  // Import the ConfigScreen class
+import '../services/basic_strat_logic.dart';  // Import the BasicStrategy class
 
 class GameScreen extends StatefulWidget {
   @override
@@ -28,6 +29,8 @@ class _GameScreenState extends State<GameScreen> {
   int currentBet = 0; // Player's current bet
 
   final TextEditingController betController = TextEditingController(); // For text input
+  bool showLight = true; // Track whether to show the light
+  Color lightColor = Colors.black; // Default light color
 
   @override
   void initState() {
@@ -77,6 +80,7 @@ class _GameScreenState extends State<GameScreen> {
     activeHandIndex = 0;
     roundOver = false;
     bettingPhase = false; // End the betting phase when the round starts
+    lightColor = Colors.black; // Reset the light color
 
     // Debugging: Print the initial cards
     //print('hand.length: ${playerHands[0].cards.length}');
@@ -143,6 +147,7 @@ class _GameScreenState extends State<GameScreen> {
 
   void playerHit() {
     setState(() {
+      evaluatePlayerMove('Hit');
       playerHands[activeHandIndex].addCard(deck.drawCard());
       if (playerHands[activeHandIndex].getTotalValue() > 21) {
         result = "Player busts on hand ${activeHandIndex + 1}!\n";
@@ -156,6 +161,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void playerStay() {
+    evaluatePlayerMove('Stand');
     moveToNextHand();
   }
 
@@ -239,6 +245,7 @@ class _GameScreenState extends State<GameScreen> {
     if (canDouble) {
       setState(() {
         currentBet *= 2; // Double the bet
+        evaluatePlayerMove('Double Down');
         playerHands[activeHandIndex].addCard(deck.drawCard()); // Draw one card for the active hand
         if (playerHands[activeHandIndex].getTotalValue() > 21) {
           result += "Player busts on hand ${activeHandIndex + 1}!\n";
@@ -253,6 +260,7 @@ class _GameScreenState extends State<GameScreen> {
     if (canSplit) {
       setState(() {
         Hand secondHand = Hand();
+        evaluatePlayerMove('Split');
         secondHand.addCard(playerHands[activeHandIndex].cards.removeAt(1));
         secondHand.addCard(deck.drawCard());
         playerHands[activeHandIndex].addCard(deck.drawCard());
@@ -266,6 +274,7 @@ class _GameScreenState extends State<GameScreen> {
   void surrender() {
     if (canSurrender) {
       setState(() {
+        evaluatePlayerMove('Surrender');
         balance -= currentBet ~/ 2; // Lose half the bet
         result += "Player surrenders on hand ${activeHandIndex + 1}!\n";
         playerHands[activeHandIndex].surrendered = true;
@@ -289,6 +298,54 @@ class _GameScreenState extends State<GameScreen> {
       betController.text = currentBet.toString();
     });
   }
+/* 
+************************
+EVALUATING PLAYERS MOVES
+************************
+*/
+void evaluatePlayerMove(String playerMove) {
+  // Get dealer's upcard
+  PlayingCard dealerUpCard = dealerHand.cards[0]; 
+  // Get the best move suggested by BasicStrategy
+  String bestMove = BasicStrategy.getBestMove(playerHands[activeHandIndex], dealerUpCard);
+
+  // Compare player's move with the best move
+  if (playerMove == bestMove) {
+    // Correct move: turn the light green
+    setState(() {
+      lightColor = Colors.green;
+      showLight = true;
+    });
+  } else {
+    // Incorrect move: turn the light red and show popup
+    setState(() {
+      lightColor = Colors.red;
+      showLight = true;
+    });
+    // Show the popup with the correct move
+    _showIncorrectMovePopup(bestMove);
+  }
+}
+
+void _showIncorrectMovePopup(String correctMove) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Incorrect Move'),
+        content: Text('The correct move was: $correctMove'),
+        actions: [
+          TextButton(
+            child: Text('OK'),
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the popup
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
 
   @override
 Widget build(BuildContext context) {
@@ -423,6 +480,15 @@ Widget build(BuildContext context) {
                     onPressed: resetRound,
                     child: Text("Start New Round"),
                   ),
+                ),
+                if (showLight)
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: lightColor, // Light color changes based on player move
+                    ),
                 ),
             ],
           ],

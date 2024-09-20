@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:trident_blackjack/screens/config_screen.dart';
 import 'training_screen.dart';  // Import the game screen
 
 class MainMenu extends StatelessWidget {
@@ -24,13 +25,16 @@ class MainMenu extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                // Add more functionality here for other screens
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ConfigScreen()),  // Pushes the GameScreen to the stack
+                );
               },
               child: Text('Settings'),
             ),
             ElevatedButton(
               onPressed: () {
-                // Add more functionality here for other screens
+                //w
               },
               child: Text('Basic Strategy Sheet'),
             ),

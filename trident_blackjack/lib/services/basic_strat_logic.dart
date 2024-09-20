@@ -6,7 +6,7 @@ class BasicStrategy {
     int dealerValue = _getCardValue(dealerUpCard);
 
     // Check if the player's hand is a pair first
-    if (playerHand.isPair()) {
+    if (playerHand.isPair() && playerHand.cards[0].rank != 'A') {
       return _getPairMove(playerHand, dealerValue);
     }
     
@@ -34,7 +34,6 @@ class BasicStrategy {
     String rank = playerHand.cards[0].rank;
 
     switch (rank) {
-      case 'A':
       case '8':
         return 'Split';
       case '10':
@@ -62,25 +61,32 @@ class BasicStrategy {
     int total = playerHand.getTotalValue();  // Soft hand total
 
     switch (total) {
-      case 20:
-        return 'Stand';
+      case 22:
+        return (dealerValue >= 5 && dealerValue <= 6) ? 'Double Down' : 'Hit';
       case 19:
-        return (dealerValue == 6) ? 'Double Down' : 'Stand';
+        return 'Stand';
       case 18:
-        if (dealerValue >= 9 || dealerValue == 2) {
+        if (dealerValue >= 9) {
           return 'Hit';
         } else if (dealerValue == 3 || dealerValue == 4 || dealerValue == 5 || dealerValue == 6) {
           return 'Double Down';
         }
         return 'Stand';
       case 17:
+        if (dealerValue == 3 || dealerValue == 4 || dealerValue == 5 || dealerValue == 6) {
+          return 'Double Down';
+        }
+        else{
+          return 'Hit';
+        }
       case 16:
       case 15:
       case 14:
-      case 13:
         return (dealerValue >= 4 && dealerValue <= 6) ? 'Double Down' : 'Hit';
+      case 13:
+        return (dealerValue >= 5 && dealerValue <= 6) ? 'Double Down' : 'Hit';
       default:
-        return 'Hit'; // fallback
+        return 'Should not have this case'; // fallback
     }
   }
 

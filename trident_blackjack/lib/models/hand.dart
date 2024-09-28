@@ -14,7 +14,7 @@ class Hand {
 
     for (var card in cards) {
       total += card.value;
-      if (card.rank == 'A') {
+      if (card.rank == 'ace') {
         numAces++;
       }
     }
@@ -29,7 +29,7 @@ class Hand {
   bool isSoft() {
       int numAces = 0;
       for (var card in cards) {
-        if (card.rank == 'A') {
+        if (card.rank == 'ace') {
           numAces++;
         }
       }

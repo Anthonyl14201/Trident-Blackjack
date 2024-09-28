@@ -20,11 +20,11 @@ class Deck {
   }
 
   void _createDeck(int numberOfDecks) {
-    List<String> suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
-    List<String> ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    List<String> suits = ['hearts', 'diamonds', 'clubs', 'spades'];
+    List<String> ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king', 'ace'];
     Map<String, int> values = {
       '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
-      '10': 10, 'J': 10, 'Q': 10, 'K': 10, 'A': 11,
+      '10': 10, 'jack': 10, 'queen': 10, 'king': 10, 'ace': 11,
     };
 
     cards.clear(); // Clear existing cards

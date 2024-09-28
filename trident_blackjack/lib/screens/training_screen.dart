@@ -137,9 +137,13 @@ class _GameScreenState extends State<GameScreen> {
       currentBet = betController.text.isEmpty ? 0 : int.parse(betController.text);
       bettingPhase = true; // Go back to betting phase
       result = '';
-      playerHands.forEach((hand) => hand.cards.forEach((card) => deck.discardCard(card)));
+      for (var hand in playerHands) {
+        hand.cards.forEach((card) => deck.discardCard(card));
+      }
     // Optionally: Discard the dealer's cards
-      dealerHand.cards.forEach((card) => deck.discardCard(card));
+      for (var card in dealerHand.cards) {
+        deck.discardCard(card);
+      }
       playerHands.clear();
       dealerHand.resetHand();
     });
@@ -390,10 +394,10 @@ Widget build(BuildContext context) {
                 children: [
                   ElevatedButton(onPressed: () => updateBet(1), child: Text("\$1")),
                   ElevatedButton(onPressed: () => updateBet(5), child: Text("\$5")),
-                  ElevatedButton(onPressed: () => updateBet(10), child: Text("\$10")),
-                  ElevatedButton(onPressed: () => updateBet(20), child: Text("\$20")),
+                  ElevatedButton(onPressed: () => updateBet(25), child: Text("\$25")),
                   ElevatedButton(onPressed: () => updateBet(50), child: Text("\$50")),
                   ElevatedButton(onPressed: () => updateBet(100), child: Text("\$100")),
+                  ElevatedButton(onPressed: () => updateBet(500), child: Text("\$500")),
                   ElevatedButton(onPressed: clearBet, child: Text("Clear")),
                 ],
               ),

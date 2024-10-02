@@ -11,7 +11,7 @@ class CardDealAnimation extends StatefulWidget {
     required this.cardWidget,
     required this.startPosition,
     required this.endPosition,
-    this.duration = const Duration(milliseconds: 400),
+    this.duration = const Duration(milliseconds: 1000),
   }) : super(key: key);
 
   @override

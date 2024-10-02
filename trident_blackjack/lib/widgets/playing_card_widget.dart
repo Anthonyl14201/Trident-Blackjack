@@ -35,16 +35,21 @@ class PlayingCardWidget extends StatelessWidget {
   }
 
   Widget _buildFaceUpCard() {
-    return Image.asset(
-      'assets/cards/${rank}_of_${suit}.png',  // Path for the card image
-      fit: BoxFit.cover,
+    return Container(
+      color: Colors.white,
+      child: Image.asset(
+        'assets/images/playing-cards/${rank}_of_${suit}.png',  // Path for the card image
+        fit: BoxFit.cover,
+      ),
     );
   }
 
   Widget _buildFaceDownCard() {
     return Image.asset(
-      'assets/cards/back.png',  // Path for the card back image
-      fit: BoxFit.cover,
+      width: 75,  // Adjust width
+      height: 100, // Adjust height
+      'assets/images/playing-cards/back.png',  // Path for the card back image
+      fit: BoxFit.contain,
     );
   }
 }

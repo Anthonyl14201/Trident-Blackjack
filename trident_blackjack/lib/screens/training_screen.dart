@@ -4,6 +4,7 @@ import 'package:trident_blackjack/models/hand.dart';  // Import the Hand class
 import 'package:shared_preferences/shared_preferences.dart';
 import 'config_screen.dart';  // Import the ConfigScreen class
 import '../services/basic_strat_logic.dart';  // Import the BasicStrategy class
+import '../widgets/playing_card_widget.dart';
 
 class GameScreen extends StatefulWidget {
   @override
@@ -31,6 +32,12 @@ class _GameScreenState extends State<GameScreen> {
   final TextEditingController betController = TextEditingController(); // For text input
   bool showLight = true; // Track whether to show the light
   Color lightColor = Colors.black; // Default light color
+  Offset dealerCardStartPosition = Offset(10, 10); // Cards start from top-right corner
+  Offset playerCardStartPosition = Offset(10, 10); // Same start position for player cards
+
+  List<Offset> playerCardPositions = [];
+  List<Offset> dealerCardPositions = [];
+
 
   @override
   void initState() {
@@ -70,13 +77,10 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  void startRound() {
+  Future<void> startRound() async {
   if (currentBet > 0) {
     playerHands = [Hand()];
-    playerHands[0].addCard(deck.drawCard());
-    playerHands[0].addCard(deck.drawCard());
-    dealerHand.addCard(deck.drawCard());
-    dealerHand.addCard(deck.drawCard());
+    dealerHand = Hand();
     activeHandIndex = 0;
     roundOver = false;
     bettingPhase = false; // End the betting phase when the round starts
@@ -87,7 +91,13 @@ class _GameScreenState extends State<GameScreen> {
     //print('Player Hand 1: ${playerHands[0].getDisplayString()}');
     //print('Dealer Hand: ${dealerHand.getDisplayString()}');
 
+    // Deal two cards to the player and dealer
+    print("hi");
+    await dealCardToPlayer(0);
     // Enable or disable options based on player's hand
+    print(playerHands[0].getDisplayString());
+    
+
     canDouble = playerHands[0].cards.length == 2;
     canSplit = playerHands[0].isPair(); // Check for matching ranks
     canSurrender = true; // Allow surrender before any other action
@@ -124,6 +134,52 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 }
+Future<void> dealCardToPlayer(int cardIndex) async {
+  if (cardIndex < 2) {
+    // Define the end position based on card index to avoid overlap
+    Offset endPosition = Offset(20.0 * cardIndex, 100.0);
+
+    // Add end position to playerCardPositions to trigger animation
+    setState(() {
+      playerCardPositions.add(endPosition);
+    });
+
+    // Wait for the delay before adding the card
+    await Future.delayed(Duration(milliseconds: 500 * cardIndex));
+
+    // After the delay, deal the card
+    setState(() {
+      playerHands[0].addCard(deck.drawCard());
+    });
+
+    // Deal card to the dealer after dealing to player
+    await dealCardToDealer(cardIndex);
+  }
+}
+
+Future<void> dealCardToDealer(int cardIndex) async {
+  Offset endPosition = Offset(20.0 * cardIndex, 20.0); // Adjust as needed
+
+  // Add end position to dealerCardPositions to trigger animation
+  setState(() {
+    dealerCardPositions.add(endPosition);
+  });
+
+  // Wait for the delay before adding the card
+  await Future.delayed(Duration(milliseconds: 500 * cardIndex));
+
+  // After the delay, deal the card
+  setState(() {
+    dealerHand.addCard(deck.drawCard());
+  });
+
+  // Continue the loop by dealing the next card to the player if necessary
+  if (cardIndex < 1) {
+    await dealCardToPlayer(cardIndex + 1);
+  }
+}
+
+
 
 
   bool isBlackjack(Hand hand) {
@@ -366,6 +422,23 @@ Widget build(BuildContext context) {
     ),
     body: Stack(  // Use Stack to overlay the card count in the top-left corner
       children: [
+        Positioned(
+          width: 111,
+          height: 162,
+          top: 10,
+          right: 10,
+          child: Padding(
+            padding: const EdgeInsets.only(),
+            child: PlayingCardWidget(
+              rank: 'back', // Assuming you have a specific rank for the back card
+              suit: 'back', // You may use a generic or placeholder value for suit
+              isFaceUp: false, // The card is face-down
+              shouldFlip: false, // Do not flip the card
+              startPosition: Offset(0, 0), // Starting position
+              endPosition: Offset(0, 0), // Ending position
+            ),
+          ),
+        ),
         Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -413,28 +486,57 @@ Widget build(BuildContext context) {
               Center(
                 child: Column(
                   children: [
+                    Text(
+                      "Dealer's Cards:",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (int i = 0; i < dealerHand.cards.length; i++)
+                          PlayingCardWidget(
+                            rank: dealerHand.cards[i].rank,
+                            suit: dealerHand.cards[i].suit,
+                            isFaceUp: roundOver || i > 0,  // Show the dealer's first card face-down if round is not over
+                            shouldFlip: roundOver || i > 0,
+                            startPosition: Offset(10, -10),
+                            endPosition: Offset(0, 0),
+                          ),
+                      ],
+                    ),
                     for (int i = 0; i < playerHands.length; i++)
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: "Hand ${i + 1}: ",
-                              style: TextStyle(
-                                fontWeight: activeHandIndex == i ? FontWeight.bold : FontWeight.normal,
-                                fontSize: 16,
-                              ),
+                      Column(
+                        children: [
+                          Text(
+                            "Hand ${i + 1}:",
+                            style: TextStyle(
+                              fontWeight: activeHandIndex == i
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              fontSize: 16,
                             ),
-                            TextSpan(
-                              text: playerHands[i].getDisplayString(), // Display each hand
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          ],
-                        ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              for (var card in playerHands[i].cards)
+                                PlayingCardWidget(
+                                  rank: card.rank,
+                                  suit: card.suit,
+                                  isFaceUp: true,  // Show player's cards face-up
+                                  shouldFlip: true,
+                                  startPosition: Offset(10, -10),
+                                  endPosition: Offset(0, 0),
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
                   ],
                 ),
               ),
-              Center(child: Text("Dealer's Cards: ${roundOver ? dealerHand.getDisplayString() : dealerHand.cards[0]}")), // Show dealer hand
+              // Display dealer's cards
+              
               if (result.isNotEmpty)
                 Center(child: Text(result, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))), // DISPLAY RESULT
               SizedBox(height: 20),

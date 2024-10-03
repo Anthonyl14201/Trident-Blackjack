@@ -365,7 +365,7 @@ EVALUATING PLAYERS MOVES
 */
 void evaluatePlayerMove(String playerMove) {
   // Get dealer's upcard
-  PlayingCard dealerUpCard = dealerHand.cards[0]; 
+  PlayingCard dealerUpCard = dealerHand.cards[1]; 
   // Get the best move suggested by BasicStrategy
   String bestMove = BasicStrategy.getBestMove(playerHands[activeHandIndex], dealerUpCard);
 

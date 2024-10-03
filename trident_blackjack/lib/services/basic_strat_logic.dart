@@ -86,7 +86,7 @@ class BasicStrategy {
       case 13:
         return (dealerValue >= 5 && dealerValue <= 6) ? 'Double Down' : 'Hit';
       default:
-        return 'Should not have this case'; // fallback
+        return 'Stand'; // fallback
     }
   }
 

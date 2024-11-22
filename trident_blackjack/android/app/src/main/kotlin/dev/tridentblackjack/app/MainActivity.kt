@@ -1,4 +1,4 @@
-package com.example.trident_blackjack
+package dev.tridentblackjack.app
 
 import io.flutter.embedding.android.FlutterActivity
 

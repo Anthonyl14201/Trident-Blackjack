@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
-import 'screens/main_menu.dart';  // Import your main menu screen
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'screens/main_menu.dart';
 import 'screens/config_screen.dart';
-void main() {
+import 'screens/profile_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(MyApp());
 }
 
@@ -16,6 +24,7 @@ class MyApp extends StatelessWidget {
       home: MainMenu(),
       routes: {
         '/config': (context) => ConfigScreen(),  // Add your config screen route
+        '/profile': (context) => ProfileScreen(),
       }
     );
   }

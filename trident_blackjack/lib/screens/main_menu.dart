@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:trident_blackjack/screens/config_screen.dart';
 import 'training_screen.dart';  // Import the game screen
 import 'strat_sheet_screen.dart';  // Import the strategy sheet screen
+import 'profile_screen.dart';
 
 class MainMenu extends StatelessWidget {
   @override
@@ -16,6 +17,25 @@ class MainMenu extends StatelessWidget {
                 image: AssetImage('assets/images/background.png'), //background image
                 fit: BoxFit.cover, // Ensures the image fills the entire screen
               ),
+            ),
+          ),
+          
+          // Add profile and settings icons at the top
+          Positioned(
+            top: 40,
+            right: 0,
+            child: Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.person, color: Colors.black, size: 30),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ProfileScreen()),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
           

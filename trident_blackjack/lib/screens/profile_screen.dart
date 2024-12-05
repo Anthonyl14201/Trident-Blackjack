@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'login_screen.dart';
+import 'register_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   final bool isLoggedIn = FirebaseAuth.instance.currentUser != null;
@@ -58,13 +60,19 @@ class ProfileScreen extends StatelessWidget {
         SizedBox(height: 20),
         ElevatedButton(
           onPressed: () {
-            // TODO: Navigate to login screen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => LoginScreen()),
+            );
           },
           child: Text('Login'),
         ),
         ElevatedButton(
           onPressed: () {
-            // TODO: Navigate to registration screen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => RegisterScreen()),
+            );
           },
           child: Text('Create Account'),
         ),

@@ -4,6 +4,9 @@ import 'firebase_options.dart';
 import 'screens/main_menu.dart';
 import 'screens/config_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/register_screen.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +28,8 @@ class MyApp extends StatelessWidget {
       routes: {
         '/config': (context) => ConfigScreen(),  // Add your config screen route
         '/profile': (context) => ProfileScreen(),
+        '/login': (context) => LoginScreen(),
+        '/register': (context) => RegisterScreen(),
       }
     );
   }
